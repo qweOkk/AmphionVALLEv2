@@ -10,7 +10,7 @@ import shutil
 import time
 from abc import abstractmethod
 from pathlib import Path
-
+import math
 import accelerate
 import json5
 import numpy as np
@@ -23,6 +23,27 @@ from tqdm import tqdm
 from models.base.base_sampler import build_samplers
 from optimizer.optimizers import NoamLR
 
+class MainProcessLogger:
+    def __init__(self, is_main_process=True, name=None, **kwargs):
+        import logging
+        if name is None:
+            logger = logging.getLogger(__name__)
+        else:
+            logger = logging.getLogger(name)
+        self.logger = logger
+        self.is_main_process = is_main_process
+    def info(self, msg):
+        if self.is_main_process:
+            print(msg)
+            # self.logger.info(msg)
+    def debug(self, msg):
+        if self.is_main_process:
+            print(msg)
+            # self.logger.debug(msg)
+    def warning(self, msg):
+        if self.is_main_process:
+            print(msg)
+            # self.logger.warning(msg)
 
 class BaseTrainer(object):
     r"""The base trainer for all tasks. Any trainer should inherit from this class."""
@@ -41,7 +62,7 @@ class BaseTrainer(object):
 
         # Use accelerate logger for distributed training
         with self.accelerator.main_process_first():
-            self.logger = get_logger(args.exp_name, log_level=args.log_level)
+            self.logger = MainProcessLogger(self.accelerator.is_main_process, name=args.exp_name, log_level=args.log_level)
 
         # Log some info
         self.logger.info("=" * 56)
@@ -85,12 +106,12 @@ class BaseTrainer(object):
         # set random seed
         with self.accelerator.main_process_first():
             start = time.monotonic_ns()
-            self._set_random_seed(self.cfg.train.random_seed)
+            self._set_random_seed(args.seed)
             end = time.monotonic_ns()
             self.logger.debug(
                 f"Setting random seed done in {(end - start) / 1e6:.2f}ms"
             )
-            self.logger.debug(f"Random seed: {self.cfg.train.random_seed}")
+            self.logger.debug(f"Random seed: {args.seed}")
 
         # setup data_loader
         with self.accelerator.main_process_first():
@@ -154,9 +175,6 @@ class BaseTrainer(object):
                     end = time.monotonic_ns()
                     self.logger.info(
                         f"Resuming from checkpoint done in {(end - start) / 1e6:.2f}ms"
-                    )
-                    self.checkpoints_path = json.load(
-                        open(os.path.join(ckpt_path, "ckpts.json"), "r")
                     )
                 else:
                     ## Resume from the given checkpoint path
@@ -223,11 +241,49 @@ class BaseTrainer(object):
         implement ``_train_step`` and ``_valid_step`` separately.
         """
         pass
-
+    def save_checkpoint(self):
+        if self.accelerator.is_main_process:
+            keep_last = self.keep_last[0]
+            # 读取self.checkpoint_dir所有的folder
+            all_ckpts = os.listdir(self.checkpoint_dir)
+            all_ckpts = filter(lambda x: x.startswith("epoch"), all_ckpts)
+            all_ckpts = list(all_ckpts)
+            if len(all_ckpts) > keep_last:
+                # 只保留keep_last个的folder in self.checkpoint_dir, sort by step  "epoch-{:04d}_step-{:07d}_loss-{:.6f}"
+                all_ckpts = sorted(all_ckpts, key=lambda x: int(x.split("_")[1].split('-')[1]))
+                for ckpt in all_ckpts[:-keep_last]:
+                    shutil.rmtree(os.path.join(self.checkpoint_dir, ckpt))
+            checkpoint_filename = "epoch-{:04d}_step-{:07d}_loss-{:.6f}".format(
+                self.epoch, self.step, self.current_loss
+            )
+            path = os.path.join(self.checkpoint_dir, checkpoint_filename)
+            self.logger.info("Saving state to {}...".format(path))
+            self.accelerator.save_state(path)
+            self.logger.info("Finished saving state.")
     @abstractmethod
     def _save_auxiliary_states(self):
         r"""To save some auxiliary states when saving model's ckpt"""
         pass
+
+    
+    def echo_log(self, losses, mode="Training"):
+        message = [
+            "{} - Epoch {} Step {}: [{:.3f} s/step]".format(
+                mode, self.epoch + 1, self.step, self.time_window.average
+            )
+        ]
+
+        for key in sorted(losses.keys()):
+            if isinstance(losses[key], dict):
+                for k, v in losses[key].items():
+                    message.append(
+                        str(k).split("/")[-1] + "=" + str(round(float(v), 5))
+                    )
+            else:
+                message.append(
+                    str(key).split("/")[-1] + "=" + str(round(float(losses[key]), 5))
+                )
+        self.logger.info(", ".join(message))
 
     ### Abstract methods end ###
 
@@ -241,8 +297,6 @@ class BaseTrainer(object):
             self.__dump_cfg(self.config_save_path)
         self.model.train()
         self.optimizer.zero_grad()
-        # Wait to ensure good to go
-        self.accelerator.wait_for_everyone()
         while self.epoch < self.max_epoch:
             self.logger.info("\n")
             self.logger.info("-" * 32)
@@ -261,66 +315,6 @@ class BaseTrainer(object):
             )
 
             self.accelerator.wait_for_everyone()
-            # TODO: what is scheduler?
-            self.scheduler.step(valid_loss)  # FIXME: use epoch track correct?
-
-            # Check if hit save_checkpoint_stride and run_eval
-            run_eval = False
-            if self.accelerator.is_main_process:
-                save_checkpoint = False
-                hit_dix = []
-                for i, num in enumerate(self.save_checkpoint_stride):
-                    if self.epoch % num == 0:
-                        save_checkpoint = True
-                        hit_dix.append(i)
-                        run_eval |= self.run_eval[i]
-
-            self.accelerator.wait_for_everyone()
-            if self.accelerator.is_main_process and save_checkpoint:
-                path = os.path.join(
-                    self.checkpoint_dir,
-                    "epoch-{:04d}_step-{:07d}_loss-{:.6f}".format(
-                        self.epoch, self.step, train_loss
-                    ),
-                )
-                self.tmp_checkpoint_save_path = path
-                self.accelerator.save_state(path)
-                print(f"save checkpoint in {path}")
-                json.dump(
-                    self.checkpoints_path,
-                    open(os.path.join(path, "ckpts.json"), "w"),
-                    ensure_ascii=False,
-                    indent=4,
-                )
-                self._save_auxiliary_states()
-
-                # Remove old checkpoints
-                to_remove = []
-                for idx in hit_dix:
-                    self.checkpoints_path[idx].append(path)
-                    while len(self.checkpoints_path[idx]) > self.keep_last[idx]:
-                        to_remove.append((idx, self.checkpoints_path[idx].pop(0)))
-
-                # Search conflicts
-                total = set()
-                for i in self.checkpoints_path:
-                    total |= set(i)
-                do_remove = set()
-                for idx, path in to_remove[::-1]:
-                    if path in total:
-                        self.checkpoints_path[idx].insert(0, path)
-                    else:
-                        do_remove.add(path)
-
-                # Remove old checkpoints
-                for path in do_remove:
-                    shutil.rmtree(path, ignore_errors=True)
-                    self.logger.debug(f"Remove old checkpoint: {path}")
-
-            self.accelerator.wait_for_everyone()
-            if run_eval:
-                # TODO: run evaluation
-                pass
 
             # Update info for each epoch
             self.epoch += 1
@@ -340,6 +334,19 @@ class BaseTrainer(object):
 
         self.accelerator.end_training()
 
+    def get_lr(self, it):
+        # 1) linear warmup for warmup_iters steps
+        if it < self.cfg.train.scheduler.warmup_steps:
+            return self.cfg.train.adamw.lr * it / self.cfg.train.scheduler.warmup_steps
+        # 2) if it > lr_decay_iters, return min learning rate
+        if it > self.cfg.train.scheduler.total_steps:
+            return self.cfg.train.scheduler.min_lr
+        # 3) in between, use cosine decay down to min learning rate
+        decay_ratio = (it - self.cfg.train.scheduler.warmup_steps) / (self.cfg.train.scheduler.total_steps - self.cfg.train.scheduler.warmup_steps)
+        assert 0 <= decay_ratio <= 1
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
+        return self.cfg.train.scheduler.min_lr + coeff * (self.cfg.train.adamw.lr - self.cfg.train.scheduler.min_lr)
+
     ### Following are methods that can be used directly in child classes ###
     def _train_epoch(self):
         r"""Training epoch. Should return average loss of a batch (sample) over
@@ -347,7 +354,12 @@ class BaseTrainer(object):
         """
         self.model.train()
         epoch_sum_loss: float = 0.0
-        epoch_step: int = 0
+        ema_loss = None
+
+        # profiler
+        start_this_step_time = time.time()
+        finish_last_step_time = time.time()
+
         for batch in tqdm(
             self.train_dataloader,
             desc=f"Training Epoch {self.epoch}",
@@ -358,18 +370,44 @@ class BaseTrainer(object):
             smoothing=0.04,
             disable=not self.accelerator.is_main_process,
         ):
+            assert batch is not None
+
+            # start_this_step_time = time.time()
+            # print(f'load batch took: {start_this_step_time - finish_last_step_time:.6f}s')
+
+            # update learning rate
+            lr = self.get_lr(self.step)
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = lr
+
             # Do training step and BP
             with self.accelerator.accumulate(self.model):
                 loss = self._train_step(batch)
+                self.current_loss = loss.item()
+                ema_loss = 0.95 * ema_loss + 0.05 * self.current_loss if ema_loss is not None else self.current_loss
                 self.accelerator.backward(loss)
+                if self.accelerator.sync_gradients:
+                    self.accelerator.clip_grad_norm_(
+                        self.model.parameters(), 1.0
+                    )
                 self.optimizer.step()
                 self.optimizer.zero_grad()
             self.batch_count += 1
 
-            # Update info for each step
-            # TODO: step means BP counts or batch counts?
-            if self.batch_count % self.cfg.train.gradient_accumulation_step == 0:
-                epoch_sum_loss += loss
+            # if self.accelerator.is_main_process:
+            #     print(self.current_loss)
+
+            if self.accelerator.sync_gradients:
+                if self.step % self.cfg.train.save_checkpoint_stride[0] == 0:
+                    self.accelerator.wait_for_everyone()
+                    if self.accelerator.is_main_process:
+                        try:
+                            self.save_checkpoint()
+                        except:
+                            self.logger.info("Failed to save checkpoint, resuming...")
+                if self.accelerator.is_main_process:
+                    if self.step % 100 == 0:
+                        self.logger.info(f'EMA Loss: {ema_loss:.6f}')
                 self.accelerator.log(
                     {
                         "Step/Train Loss": loss,
@@ -377,10 +415,11 @@ class BaseTrainer(object):
                     },
                     step=self.step,
                 )
+                epoch_sum_loss += loss
                 self.step += 1
-                epoch_step += 1
 
-        self.accelerator.wait_for_everyone()
+            # finish_last_step_time = time.time()
+            # print(f'load took: {finish_last_step_time - start_this_step_time:.6f}s')
         return (
             epoch_sum_loss
             / len(self.train_dataloader)
@@ -407,7 +446,6 @@ class BaseTrainer(object):
             batch_loss = self._valid_step(batch)
             epoch_sum_loss += batch_loss.item()
 
-        self.accelerator.wait_for_everyone()
         return epoch_sum_loss / len(self.valid_dataloader)
 
     def _train_step(self, batch):
@@ -437,10 +475,13 @@ class BaseTrainer(object):
         method after** ``accelerator.prepare()``.
         """
         if checkpoint_path is None:
-            ls = [str(i) for i in Path(checkpoint_dir).glob("*")]
-            ls.sort(key=lambda x: int(x.split("_")[-3].split("-")[-1]), reverse=True)
+            all_ckpts = os.listdir(checkpoint_dir)
+            all_ckpts = filter(lambda x: x.startswith("epoch"), all_ckpts)
+            ls = list(all_ckpts)
+            ls = [os.path.join(checkpoint_dir, i) for i in ls]
+            ls.sort(key=lambda x: int(x.split("_")[-2].split("-")[-1]), reverse=True)
             checkpoint_path = ls[0]
-            self.logger.info("Resume from {}...".format(checkpoint_path))
+            self.logger.info("Resume from {}".format(checkpoint_path))
 
         if resume_type in ["resume", ""]:
             # Load all the things, including model weights, optimizer, scheduler, and random states.
@@ -463,6 +504,7 @@ class BaseTrainer(object):
 
         return checkpoint_path
 
+    # TODO: LEGACY CODE
     def _build_dataloader(self):
         Dataset, Collator = self._build_dataset()
 
@@ -479,7 +521,6 @@ class BaseTrainer(object):
         # TODO: use config instead of (sampler, shuffle, drop_last, batch_size)
         train_loader = DataLoader(
             train_dataset,
-            # shuffle=True,
             collate_fn=train_collate,
             batch_sampler=batch_sampler,
             num_workers=self.cfg.train.dataloader.num_worker,
@@ -514,39 +555,41 @@ class BaseTrainer(object):
 
     def _check_nan(self, loss, y_pred, y_gt):
         if torch.any(torch.isnan(loss)):
-            self.logger.error("Fatal Error: Training is down since loss has Nan!")
+            self.logger.fatal("Fatal Error: Training is down since loss has Nan!")
             self.logger.error("loss = {:.6f}".format(loss.item()), in_order=True)
-
-            ### y_pred ###
             if torch.any(torch.isnan(y_pred)):
                 self.logger.error(
                     f"y_pred has Nan: {torch.any(torch.isnan(y_pred))}", in_order=True
                 )
-                self.logger.error(f"y_pred: {y_pred}", in_order=True)
             else:
                 self.logger.debug(
                     f"y_pred has Nan: {torch.any(torch.isnan(y_pred))}", in_order=True
                 )
-                self.logger.debug(f"y_pred: {y_pred}", in_order=True)
-
-            ### y_gt ###
             if torch.any(torch.isnan(y_gt)):
                 self.logger.error(
                     f"y_gt has Nan: {torch.any(torch.isnan(y_gt))}", in_order=True
                 )
-                self.logger.error(f"y_gt: {y_gt}", in_order=True)
             else:
                 self.logger.debug(
                     f"y_gt has nan: {torch.any(torch.isnan(y_gt))}", in_order=True
                 )
+            if torch.any(torch.isnan(y_pred)):
+                self.logger.error(f"y_pred: {y_pred}", in_order=True)
+            else:
+                self.logger.debug(f"y_pred: {y_pred}", in_order=True)
+            if torch.any(torch.isnan(y_gt)):
+                self.logger.error(f"y_gt: {y_gt}", in_order=True)
+            else:
                 self.logger.debug(f"y_gt: {y_gt}", in_order=True)
 
+            # TODO: still OK to save tracking?
             self.accelerator.end_training()
             raise RuntimeError("Loss has Nan! See log for more info.")
 
     ### Protected methods end ###
 
     ## Following are private methods ##
+    ## !!! These are inconvenient for GAN-based model training. It'd be better to move these to svc_trainer.py if needed.
     def _build_optimizer(self):
         r"""Build optimizer for model."""
         # Make case-insensitive matching
@@ -680,10 +723,14 @@ class BaseTrainer(object):
             project_dir=self.exp_dir,
             logging_dir=os.path.join(self.exp_dir, "log"),
         )
+        from accelerate import DistributedDataParallelKwargs
+        kwargs = DistributedDataParallelKwargs(find_unused_parameters=self.cfg.train.find_unused_parameters)
+
         self.accelerator = accelerate.Accelerator(
             gradient_accumulation_steps=self.cfg.train.gradient_accumulation_step,
             log_with=self.cfg.train.tracker,
             project_config=project_config,
+            kwargs_handlers=[kwargs],
         )
         if self.accelerator.is_main_process:
             os.makedirs(project_config.project_dir, exist_ok=True)
@@ -724,4 +771,7 @@ class BaseTrainer(object):
             quote_keys=True,
         )
 
+    @torch.inference_mode()
+    def test_loop(self):
+        pass
     ### Private methods end ###

@@ -171,6 +171,7 @@ class ValleARTrainer(BaseTrainer):
                 ),
                 pin_memory=self.cfg.train.dataloader.pin_memory,
                 persistent_workers=self.cfg.train.dataloader.persistent_workers,
+                prefetch_factor=4,
             )
             print(f'process {self.accelerator.local_process_index} has {len(batches)} batches')
             self.accelerator.wait_for_everyone()
@@ -219,21 +220,22 @@ class ValleARTrainer(BaseTrainer):
 
             batch['speech'] = vq_id[0] # use first layer
 
+
             # save gt
-            recovered_audio = self.codec_encoder.decode([(vq_id.transpose(0,1), None)])
+            recovered_audio = self.codec_encoder.decode([(vq_id[:1].transpose(0,1), None)])
             torchaudio.save('gt.wav', recovered_audio[0].cpu(), 24000)
 
             out_vq_ids = self.model.sample_hf(
-                batch['phone_ids'],
-                batch['speech'][:, :225],
+                batch['phone_ids'][:1, ...],
+                batch['speech'][:1, :225],
             )
-            out_vq_ids = torch.cat([batch['speech'][:, :225], out_vq_ids], dim=1)
+            out_vq_ids = torch.cat([batch['speech'][:1, :225], out_vq_ids[:1, ...]], dim=1)
 
-            breakpoint()
             # reconstruct form tokens
             recovered_audio = self.codec_encoder.decode([(out_vq_ids.unsqueeze(0), None)])
             torchaudio.save('a.wav', recovered_audio[0].cpu(), 24000)
             breakpoint()
+            print()
 
 
     @torch.inference_mode()

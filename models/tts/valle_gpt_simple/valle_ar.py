@@ -74,6 +74,7 @@ class ValleAR(nn.Module):
         )
         input_token_ids = torch.cat([phone_ids, target_ids], dim=-1)
         attention_mask = torch.cat([phone_mask, target_mask], dim=-1)
+        # breakpoint()
         if input_embeds is not None:
             raise NotImplementedError
             attention_mask = torch.cat(
@@ -122,6 +123,7 @@ class ValleAR(nn.Module):
             labels=labels,
             return_dict=True,
         )
+        # breakpoint()
         return out
 
     def add_phone_eos_bos_label(

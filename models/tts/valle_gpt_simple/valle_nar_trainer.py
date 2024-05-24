@@ -1,6 +1,7 @@
 import torch
 import torchaudio
-
+import numpy as np
+import time
 from .valle_ar_trainer import ValleARTrainer, make_pad_mask
 
 # TODO: variable prompt len
@@ -36,6 +37,8 @@ class ValleNARTrainer(ValleARTrainer):
 
         phone_mask = 1 - make_pad_mask(batch['phone_lens'], max_len=batch['phone_ids'].size(1), left_pad=True).to(torch.long)
         speech_mask = 1 - make_pad_mask(batch['speech_len'], max_len=batch['speech'].size(-1)).to(torch.long)
+
+        np.random.seed(int(time.time()) + self.accelerator.num_processes)
 
         out = self.model(
             phone_ids = batch['phone_ids'],

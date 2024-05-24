@@ -429,9 +429,9 @@ class ValleNAR(nn.Module):
         phone_embedding = self.phone_embedder(phone_ids-self.target_vocab_size) # [B, T, H]
 
         # randomly select a prompt length
-        NUM_PROMPT_TOKENS = torch.randint(
-            min(target_ids.shape[-1]//4, 5), target_ids.shape[-1]//2, (target_ids.shape[0],)
-        ).to(target_ids.device)
+        NUM_PROMPT_TOKENS = np.random.randint(
+            min(target_ids.shape[-1]//4, 5), target_ids.shape[-1]//2
+        )
 
         # extract 8-level prompts
         prompt_tokens = target_ids[:, :, :NUM_PROMPT_TOKENS]
