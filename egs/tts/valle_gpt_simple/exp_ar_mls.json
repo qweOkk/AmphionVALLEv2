@@ -50,10 +50,6 @@
       "noise_dir": "/mnt/petrelfs/hehaorui/data/noise/audiocaps",
       "content_model_path": "/mnt/petrelfs/hehaorui/data/pretrained_ckpts/mhubert"
     },
-    "codec": {
-      "encoder_path": "/mnt/petrelfs/hehaorui/jiaqi/vc-dev/encoder.bin",
-      "decoder_path": "/mnt/petrelfs/hehaorui/jiaqi/vc-dev/decoder.bin"
-    },
     "model": {
       "phone_vocab_size": 100,
       "target_vocab_size": 1024,
