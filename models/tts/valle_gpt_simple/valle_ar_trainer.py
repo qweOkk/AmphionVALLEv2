@@ -143,7 +143,7 @@ class ValleARTrainer(BaseTrainer):
         if self.cfg.train.dataset.use_dynamic_batchsize:
             if self.accelerator.is_main_process:
                 self.logger.info("Use Dynamic Batchsize......")
-            from models.tts.valle_gpt.valle_dataset import batch_by_size
+            from models.tts.valle_gpt_simple.mls_dataset import batch_by_size
             batch_sampler = batch_by_size(
                 train_dataset.num_frame_indices,
                 train_dataset.get_num_frames,
