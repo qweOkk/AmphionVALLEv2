@@ -58,6 +58,7 @@ def main():
         type=int,
         default=1234,
         help="random seed",
+        required=False,
     )
     parser.add_argument(
         "--exp_name",

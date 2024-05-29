@@ -123,18 +123,22 @@ class ValleARTrainer(BaseTrainer):
         # if self.accelerator.is_main_process:
         #     print(loss)
         return loss
+    
+    ##########add your own dataloader to the trainer#############
     def _build_dataloader(self):
         from torch.utils.data import ConcatDataset, DataLoader
         if self.cfg.train.dataset.name == 'emilia':
             from .emilia_dataset import EmiliaDataset as VALLEDataset
             train_dataset = VALLEDataset()
-        else:
+        elif self.cfg.train.dataset.name == 'mls':
             from .mls_dataset import VALLEDataset as VALLEDataset
             train_dataset = VALLEDataset(self.cfg.trans_exp, resample_to_24k=True)
+        elif self.cfg.train.dataset.name == 'libritts':
+            from .libritts_dataset import VALLEDataset as VALLEDataset
+            train_dataset = VALLEDataset(self.cfg.trans_exp)
+
         from .valle_collator import VALLECollator
         import numpy as np
-
-
 
         print('length of train_dataset:', len(train_dataset))
 
@@ -143,7 +147,7 @@ class ValleARTrainer(BaseTrainer):
         if self.cfg.train.dataset.use_dynamic_batchsize:
             if self.accelerator.is_main_process:
                 self.logger.info("Use Dynamic Batchsize......")
-            from models.tts.valle_gpt.valle_dataset import batch_by_size
+            from .mls_dataset import batch_by_size
             batch_sampler = batch_by_size(
                 train_dataset.num_frame_indices,
                 train_dataset.get_num_frames,
