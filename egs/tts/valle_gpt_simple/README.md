@@ -68,6 +68,8 @@ Make file `libritts_dataset.py`
 
 Initialize metadata_cache and transcripts_cache and filter duration between 3s and 15s:
 
+You can try 3s to 10s for less memory.
+
 ```py
     def __init__(self, args):
         # set dataframe clumn name
@@ -104,7 +106,7 @@ Initialize metadata_cache and transcripts_cache and filter duration between 3s a
         # filter_by_duration: filter_out files with duration < 3.0 or > 15.0
         print(f"Filtering files with duration between 3.0 and 15.0 seconds")
         print(f"Before filtering: {len(self.trans_cache)}")
-        self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (self.trans_cache['Duration'] <= 25.0)]
+        self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (self.trans_cache['Duration'] <= 15.0)]
         print(f"After filtering: {len(self.trans_cache)}")
 ```
 
@@ -146,8 +148,6 @@ def test():
 run `python -m models.tts.valle_gpt_simple.libritts_dataset`
 
 if you get a dataframe of transcripts with dir_path and Duration your dataset.py is correct 😊
-
-:bowtie:
 
 ## [Add your Dataloader to the Trainer](../../../models/tts/valle_gpt_simple/valle_ar_trainer.py)
 
@@ -259,6 +259,17 @@ CUDA_VISIBLE_DEVICES=0 accelerate launch --main_process_port $port "${work_dir}"
 **[TODO]: Run the command to Train AR on `dev-clean` dataset**
 
 ```sh
-sh egs/tts/valle_gpt_simple/train_ar_sample.sh
+sh egs/tts/valle_gpt_simple/train_ar_libritts.sh
 ```
 Hope your code is running🏃🏃🏃🏃🏃
+
+## RuntimeError: language "cmn" is not supported by the espeak backend
+If you met the error`RuntimeError: language "cmn" is not supported by the espeak backend`
+
+Comment this line out in [g2p.py](AmphionVALLEv2/utils/g2p/g2p.py)
+
+```py
+# 创建支持中文的 Espeak 后端
+phonemizer_zh = EspeakBackend('cmn', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
+# phonemizer_zh.separator = separator
+```
