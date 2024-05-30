@@ -273,3 +273,71 @@ Comment this line out in [g2p.py](../../../utils/g2p/g2p.py)
 phonemizer_zh = EspeakBackend('cmn', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
 # phonemizer_zh.separator = separator
 ```
+
+# Run with Slurm 
+
+首先将 `/nfsmnt/{yourname}/AmphionVALLEv2/egs/tts/valle_gpt_simple/train_ar_libritts.sh` 路径下的前八行改为这个样子：
+```
+#!/usr/bin/env bash
+#SBATCH --job-name=train-valle-ar            # Job name
+#SBATCH --output result.out         ## filename of the output
+#SBATCH --nodes=1                   ## Run all processes on a single node	
+#SBATCH --ntasks=8                  ## number of processes = 20
+#SBATCH --cpus-per-task=1           ## Number of CPU cores allocated to each process
+#SBATCH --partition=Project         ## Partition name: Project or Debug (Debug is default)
+```
+
+## espeak-ng Installation
+
+1. 浏览器搜索 `espeak-ng`，找到 GitHub 上的库，然后输入：
+    ```sh
+    git clone https://github.com/espeak-ng/espeak-ng.git
+    ```
+
+2. 下载完后执行：
+    ```sh
+    sh autogen.sh
+    ./configure --prefix=你的路径/espeak
+    ```
+
+3. 接着输入：
+    ```sh
+    make
+    make install
+    ```
+
+4. 修改 `.bashrc` 文件，加入这一行：
+    ```sh
+    export PATH=$PATH:/nfsmnt/{yourname}/espeak/bin
+    ```
+
+5. 然后更新：
+    ```sh
+    source .bashrc
+    ```
+
+## Modify g2p.py
+
+修改 `utils` 下的 `g2p/g2p.py` 文件，在 `import` 下面加入这两行：
+
+```python
+_ESPEAK_LIBRARY = '/nfsmnt/{yourname}/espeak/lib/libespeak-ng.so.1.1.51'
+EspeakBackend.set_library(_ESPEAK_LIBRARY)
+```
+
+## JSON Configuration
+
+修改 `/nfsmnt/{yourname}/AmphionVALLEv2/egs/tts/valle_gpt_simple/exp_ar_libritts.json` 文件：
+
+- 将 13 行的 `numworker` 改为 `4`
+- 40 行的 `batchsize` 改为 `1`
+
+## Modify Dataset Script
+
+修改 `/nfsmnt/{yourname}/AmphionVALLEv2/models/tts/valle_gpt_simple/libritts_dataset.py` 下的 87 行，从 `25` 改为 `10`：
+
+```python
+self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (self.trans_cache['Duration'] <= 10.0)]
+```
+
+You can save the above content as a `.md` file. If you need any further modifications, let me know!
