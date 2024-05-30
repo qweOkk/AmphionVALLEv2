@@ -10,7 +10,12 @@ https://github.com/espeak-ng/espeak-ng/blob/master/docs/guide.md
 For Linux, it should be `sudo apt-get install espeak-ng`.
 For Windows, refer to the above link.
 
-Make sure your transformers version is 4.30.2, other versions are not tested.
+Make sure your transformers version is 4.30.2, for other versions, if you meet the error `TypeError: LlamaDecoderLayer.__init__() missing 1 required positional argument: 'layer_idx'`, you can 
+change line 35 (`__init__` function in `LlamaNARDecoderLayer` class, from `super().__init__(config=config)` to `super().__init__(config=config, layer_idx=0)` to resolve the issue.
+
+## The model files
+File `valle_ar.py` and `valle_nar.py` in this folder are models files, these files can be run directly via `python -m models.tts.valle_gpt_simple.valle_ar` (or `python -m models.tts.valle_gpt_simple.valle_nar`, and will invoke a test which overfits it to a single example.
+
 ## Preparing dataset and dataloader
 Write your own dataloader for your dataset. 
 You can reference the `__getitem__` method in `models/tts/valle_gpt_simple/mls_dataset.py`
