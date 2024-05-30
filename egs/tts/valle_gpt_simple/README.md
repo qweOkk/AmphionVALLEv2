@@ -266,7 +266,7 @@ Hope your code is running🏃🏃🏃🏃🏃
 ## RuntimeError: language "cmn" is not supported by the espeak backend
 If you met the error`RuntimeError: language "cmn" is not supported by the espeak backend`
 
-Comment this line out in [g2p.py](AmphionVALLEv2/utils/g2p/g2p.py)
+Comment this line out in [g2p.py](../../../utils/g2p/g2p.py)
 
 ```py
 # 创建支持中文的 Espeak 后端
