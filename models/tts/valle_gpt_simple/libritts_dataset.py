@@ -84,7 +84,7 @@ class VALLEDataset(Dataset):
         # filter_by_duration: filter_out files with duration < 3.0 or > 15.0
         print(f"Filtering files with duration between 3.0 and 15.0 seconds")
         print(f"Before filtering: {len(self.trans_cache)}")
-        self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (self.trans_cache['Duration'] <= 25.0)]
+        self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (self.trans_cache['Duration'] <= 15.0)]
         print(f"After filtering: {len(self.trans_cache)}")
 
 
@@ -145,7 +145,7 @@ class VALLEDataset(Dataset):
     
     def get_num_frames(self, index):
         # get_num_frames(durations) by index
-        duration = self.meta_data_cache['duration'][index]
+        duration = self.meta_data_cache['Duration'][index]
         # num_frames = duration * SAMPLE_RATE
         num_frames = int(duration * 75)
 
