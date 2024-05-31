@@ -275,13 +275,14 @@ phonemizer_zh = EspeakBackend('cmn', preserve_punctuation=False, with_stress=Fal
 ```
 
 # Run with Slurm 
-
+首先通过 `sinfo`指令查看空闲的节点，在下面指定节点时需要指定一个空闲的节点。
 首先将 `/nfsmnt/{yourname}/AmphionVALLEv2/egs/tts/valle_gpt_simple/train_ar_libritts.sh` 路径下的前八行改为这个样子：
 ```
 #!/usr/bin/env bash
 #SBATCH --job-name=train-valle-ar            # Job name
 #SBATCH --output result.out         ## filename of the output
-#SBATCH --nodes=1                   ## Run all processes on a single node	
+#SBATCH --nodes=1                   ## Run all processes on a single node
+#SBATCH -w, --nodelist=node03             ## Request the pointed node 	
 #SBATCH --ntasks=8                  ## number of processes = 20
 #SBATCH --cpus-per-task=1           ## Number of CPU cores allocated to each process
 #SBATCH --partition=Project         ## Partition name: Project or Debug (Debug is default)
@@ -341,3 +342,15 @@ self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (sel
 ```
 
 You can save the above content as a `.md` file. If you need any further modifications, let me know!
+
+## Resume from the exist checkpoint
+
+在 `/nfsmnt/qiujunwen/AmphionVALLEv2/egs/tts/valle_gpt_simple/train_ar_libritts.sh` 文件里的最后面的train model 改为：
+```
+echo "Experimental Name: $exp_name"
+CUDA_VISIBLE_DEVICES=0 accelerate launch --main_process_port $port "${work_dir}"/bins/tts/train.py --config $exp_config --exp_name $exp_name --log_level debug \
+    --resume \
+    --resume_type "resume" \
+    --resume_from_ckpt_path "/nfsmnt/qiujunwen/AmphionVALLEv2/ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0029_step-0092000_loss-0.348073"
+```
+ckpt_path 更改成你跑出来最后一个epoch的checkpoint文件夹路径。
