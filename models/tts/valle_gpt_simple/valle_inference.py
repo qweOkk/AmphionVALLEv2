@@ -2,10 +2,10 @@ import torch
 import torchaudio
 
 class ValleInference(torch.nn.Module):
-    def __init__(self, use_vocos=False):
+    def __init__(self, use_vocos=False, ar_path=None, nar_path=None, device='cuda'):
         super().__init__()
 
-        self.device = "cuda"
+        self.device = device
 
         from .valle_ar import ValleAR
         self.ar_model = ValleAR(
@@ -20,13 +20,16 @@ class ValleInference(torch.nn.Module):
             eos_prompt_id=1130,
         )
         # change the following path to your trained model path
-        try:
-          from huggingface_hub import hf_hub_download
-          self.ar_model.load_state_dict(torch.load(hf_hub_download('jiaqili3/vallex', 'valle_ar_mls_encodec.bin'))
-          # or load from your local path
-          # self.ar_model.load_state_dict(torch.load('/mnt/petrelfs/hehaorui/jiaqi/vc-dev/ckpt/valle_gpt_simple/ar_mls/checkpoint/epoch-0005_step-0406000_loss-2.203645/valle_ar_mls_encodec.bin'))
-        except:
-          raise NotImplementedError('no AR pretrianed model found!')
+        if ar_path is not None:
+            self.ar_model.load_state_dict(torch.load(ar_path, map_location='cpu'))
+        else:
+            try:
+                from huggingface_hub import hf_hub_download
+                self.ar_model.load_state_dict(torch.load(hf_hub_download('jiaqili3/vallex', 'valle_ar_mls_encodec.bin'), map_location='cpu'))
+                # or load from your local path
+                # self.ar_model.load_state_dict(torch.load('/mnt/petrelfs/hehaorui/jiaqi/vc-dev/ckpt/valle_gpt_simple/ar_mls/checkpoint/epoch-0005_step-0406000_loss-2.203645/valle_ar_mls_encodec.bin'))
+            except Exception as e:
+                raise NotImplementedError(f'No AR pretrianed model found! Original failure: {e}')
         self.ar_model.eval().to(self.device)
         from .valle_nar import ValleNAR
         self.nar_model = ValleNAR(
@@ -40,14 +43,15 @@ class ValleInference(torch.nn.Module):
             bos_prompt_id=1129,
             eos_prompt_id=1130,
         )
-        # change the following path to your trained model path
-        try:
-          from huggingface_hub import hf_hub_download
-          self.nar_model.load_state_dict(torch.load(hf_hub_download('jiaqili3/vallex', 'valle_nar_mls_encodec.bin'))
-          # or load from your local path
-          # self.nar_model.load_state_dict(torch.load('/mnt/petrelfs/hehaorui/jiaqi/vc-dev/ckpt/valle_gpt_simple/nar_mls/checkpoint/epoch-0005_step-0266000_loss-2.462479/valle_nar_mls_encodec.bin'))
-        except:
-          raise NotImplementedError('no NAR pretrianed model found!')
+        if nar_path is not None:
+            self.nar_model.load_state_dict(torch.load(ar_path, map_location='cpu'))
+        else:
+            try:
+                from huggingface_hub import hf_hub_download
+                self.nar_model.load_state_dict(torch.load(hf_hub_download('jiaqili3/vallex', 'valle_nar_mls_encodec.bin'), map_location='cpu'))
+            except Exception as e:
+                raise NotImplementedError(f'No NAR pretrianed model found! Original failure: {e}')
+
         self.nar_model.eval().to(self.device)
 
         from encodec import EncodecModel
