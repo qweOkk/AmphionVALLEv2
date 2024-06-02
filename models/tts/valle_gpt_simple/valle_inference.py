@@ -44,11 +44,11 @@ class ValleInference(torch.nn.Module):
             eos_prompt_id=1130,
         )
         if nar_path is not None:
-            self.nar_model.load_state_dict(torch.load(ar_path, map_location='cpu'))
+            self.nar_model.load_state_dict(torch.load(nar_path, map_location='cpu'))
         else:
             try:
                 from huggingface_hub import hf_hub_download
-                self.nar_model.load_state_dict(torch.load(hf_hub_download('jiaqili3/vallex', 'valle_nar_mls_encodec.bin'), map_location='cpu'))
+                self.nar_model.load_state_dict(torch.load(hf_hub_download('jiaqili3/vallex', 'valle_nar_mls_encodec.bin', endpoint='https://hf-mirror.com'), map_location='cpu'))
             except Exception as e:
                 raise NotImplementedError(f'No NAR pretrianed model found! Original failure: {e}')
 

@@ -409,7 +409,7 @@ class ValleNAR(nn.Module):
     
     def forward(
         self, phone_ids, phone_mask, target_ids, target_mask, input_embeds=None,
-        target_quantization_layer=None,
+        target_quantization_layer=None, prompt_len=None,
     ):
         '''
         phone_ids: [B, T]
@@ -429,7 +429,7 @@ class ValleNAR(nn.Module):
         phone_embedding = self.phone_embedder(phone_ids-self.target_vocab_size) # [B, T, H]
 
         # randomly select a prompt length
-        NUM_PROMPT_TOKENS = np.random.randint(
+        NUM_PROMPT_TOKENS = prompt_len or np.random.randint(
             min(target_ids.shape[-1]//4, 5), target_ids.shape[-1]//2
         )
 
@@ -522,6 +522,7 @@ class ValleNAR(nn.Module):
                 target_ids=target_ids,
                 target_mask=target_mask,
                 target_quantization_layer=qnt_level,
+                prompt_len=prompt_ids.shape[-1]
             )
             logits = out.logits
             from utils.topk_sampling import topk_sampling

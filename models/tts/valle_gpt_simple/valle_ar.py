@@ -171,6 +171,7 @@ class ValleAR(nn.Module):
         top_k=100,
         top_p=0.9,
         repeat_penalty=1.0,
+        num_beams=1,
     ):
         if inputs_embeds is not None:
             inputs_embeds = self.emb_linear(inputs_embeds)
@@ -224,6 +225,7 @@ class ValleAR(nn.Module):
             top_k=top_k,
             top_p=top_p,
             repetition_penalty=repeat_penalty,
+            num_beams=num_beams,
         )
 
         gen_tokens = generated_ids[:, input_length:-1]
