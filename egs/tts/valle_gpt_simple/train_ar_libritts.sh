@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=train-valle-ar            # Job name
-#SBATCH --nodes=1                  # Run all processes on a single node  
-#SBATCH --ntasks=1                 # Run a single task        
-#SBATCH --cpus-per-task=32         # Number of CPU cores per task
-#SBATCH --gres=gpu:4               # Number of GPU cores per node
-#SBATCH --partition=mm_steel
+#SBATCH --output result.out         ## filename of the output
+#SBATCH --nodes=1                   ## Run all processes on a single node	
+#SBATCH -w, --nodelist=node03             ## Request the pointed node  
+#SBATCH --ntasks=8                  ## number of processes = 20
+#SBATCH --cpus-per-task=1           ## Number of CPU cores allocated to each process
+#SBATCH --partition=Project         ## Partition name: Project or Debug (Debug is default)
 export PYTHONPATH="./"
- 
+
 echo "Date              = $(date)"
 echo "Hostname          = $(hostname -s)"
 echo "Working Directory = $(pwd)"
@@ -25,21 +26,20 @@ unset HTTPS_PROXY
  
 
 ######## Build Experiment Environment ###########
-exp_dir="/mnt/workspace/lizhekai/AmphionVALLEv2/egs/tts/valle_gpt_simple"
+exp_dir="/nfsmnt/qiujunwen/AmphionVALLEv2/egs/tts/valle_gpt_simple"
 echo exp_dir
-work_dir="/mnt/workspace/lizhekai/AmphionVALLEv2/"
+work_dir="/nfsmnt/qiujunwen/AmphionVALLEv2/"
 echo work_dir
-
+echo PATH
 
 export WORK_DIR=$work_dir
 export PYTHONPATH=$work_dir
 export PYTHONIOENCODING=UTF-8
- 
+export PATH=$PATH:/nfsmnt/qiujunwen/espeak/bin
 cd $work_dir/modules/monotonic_align
 mkdir -p monotonic_align
 python setup.py build_ext --inplace
 cd $work_dir
-
 ######## Set Config File Dir ##############
 if [ -z "$exp_config" ]; then
     exp_config="${exp_dir}"/exp_ar_libritts.json
@@ -53,8 +53,8 @@ port=53333
 
 ######## Train Model ###########
 echo "Experimental Name: $exp_name"
-CUDA_VISIBLE_DEVICES=0 accelerate launch --main_process_port $port "${work_dir}"/bins/tts/train.py --config $exp_config --exp_name $exp_name --log_level debug 
-    # --resume \
-    # --resume_type "resume"
-
+CUDA_VISIBLE_DEVICES=0 accelerate launch --main_process_port $port "${work_dir}"/bins/tts/train.py --config $exp_config --exp_name $exp_name --log_level debug \
+    --resume \
+    --resume_type "resume" \
+    --resume_from_ckpt_path "/nfsmnt/qiujunwen/AmphionVALLEv2/ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0029_step-0092000_loss-0.348073"
 # uncomment the "resume" part to automatically resume from the last-time checkpoint

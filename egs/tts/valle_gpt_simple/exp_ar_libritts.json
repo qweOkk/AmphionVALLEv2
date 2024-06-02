@@ -1,6 +1,6 @@
 {
     "model_type": "valle_simple_ar",
-    "log_dir": "/mnt/workspace/lizhekai/AmphionVALLEv2/ckpt/valle_gpt_simple",
+    "log_dir": "/nfsmnt/qiujunwen/AmphionVALLEv2/ckpt/valle_gpt_simple",
     "train": {
         "gradient_accumulation_step": 1,
         "find_unused_parameters": false,
@@ -10,7 +10,7 @@
         "keep_last": [1],
         "run_eval": [true],
         "dataloader": {
-          "num_worker": 32,
+          "num_worker": 4,
           "pin_memory": true,
           "persistent_workers": true
         },
@@ -37,18 +37,18 @@
         "exponentiallr": {
           "gamma": 0.999999
         },
-        "batch_size": 3,
+        "batch_size": 1,
         "max_tokens": 11000,
         "max_sentences": 64,
         "random_seed": 0
     }, 
     "trans_exp": {
       "dataset_list":["dev_clean"],
-      "cache_dir": "/mnt/workspace/lizhekai/data/exp_cache/tts/",
+      "cache_dir": "/nfsmnt/qiujunwen/AmphionVALLEv2/data/exp_cache/tts/",
       "use_speaker": false,
       "use_noise": false,
-      "noise_dir": "/mnt/workspace/lizhekai/data/noise/audiocaps",
-      "content_model_path": "/mnt/petrelfs/hehaorui/data/pretrained_ckpts/mhubert"
+      "noise_dir": "/nfsmnt/qiujunwen/AmphionVALLEv2/data/noise/audiocaps",
+      "content_model_path": "/nfsmnt/qiujunwen/AmphionVALLEv2/data/pretrained_ckpts/mhubert"
     },
     "model": {
       "phone_vocab_size": 100,

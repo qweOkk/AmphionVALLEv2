@@ -4,13 +4,14 @@ from phonemizer.utils import list2str, str2list
 from typing import List, Union
 import os
 import json
-
+_ESPEAK_LIBRARY = '/nfsmnt/qiujunwen/espeak/lib/libespeak-ng.so.1.1.51'
+EspeakBackend.set_library(_ESPEAK_LIBRARY)
 # separator=Separator(phone=' ', word=' _ ', syllable='|'),
 # # 设置用于分隔单词、音节和音素的符号
 separator = Separator(word=" _ ", syllable="|", phone=" ")
 
 # 创建支持中文的 Espeak 后端
-phonemizer_zh = EspeakBackend('cmn', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
+#phonemizer_zh = EspeakBackend('cmn', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
 # phonemizer_zh.separator = separator
 
 # 创建支持英文的 Espeak 后端
@@ -18,29 +19,29 @@ phonemizer_en = EspeakBackend('en-us', preserve_punctuation=False, with_stress=F
 # phonemizer_en.separator = separator
 
 # 创建支持日文的 Espeak 后端
-phonemizer_ja = EspeakBackend('ja', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
+#phonemizer_ja = EspeakBackend('ja', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
 # phonemizer_ja.separator = separator
 
 # 创建支持韩文的 Espeak 后端
-phonemizer_ko = EspeakBackend('ko', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
+#phonemizer_ko = EspeakBackend('ko', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
 # phonemizer_ko.separator = separator
 
 # 创建支持法文的 Espeak 后端
-phonemizer_fr = EspeakBackend('fr-fr', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
+#phonemizer_fr = EspeakBackend('fr-fr', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
 # phonemizer_fr.separator = separator
 
 # 创建支持德文的 Espeak 后端
-phonemizer_de = EspeakBackend('de', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
+#phonemizer_de = EspeakBackend('de', preserve_punctuation=False, with_stress=False, language_switch="remove-flags")
 # phonemizer_de.separator = separator
  
 
 lang2backend = {
-    'zh': phonemizer_zh,
-    'ja': phonemizer_ja,
+    #'zh': phonemizer_zh,
+    #'ja': phonemizer_ja,
     "en": phonemizer_en,
-    "fr": phonemizer_fr,
-    "ko": phonemizer_ko,
-    "de": phonemizer_de,
+    #"fr": phonemizer_fr,
+    #"ko": phonemizer_ko,
+    #"de": phonemizer_de,
 }
 
 with open("./utils/g2p/mls_en.json", 'r') as f:

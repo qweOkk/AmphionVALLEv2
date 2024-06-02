@@ -1,0 +1,78 @@
+{
+    "exp_name": "ar_libritts_dev_clean",
+    "log_dir": "/nfsmnt/qiujunwen/AmphionVALLEv2/ckpt/valle_gpt_simple",
+    "model": {
+        "bos_phone_id": 1127,
+        "bos_prompt_id": 1129,
+        "bos_target_id": 1125,
+        "eos_phone_id": 1128,
+        "eos_prompt_id": 1130,
+        "eos_target_id": 1126,
+        "pad_token_id": 1124,
+        "phone_vocab_size": 100,
+        "target_vocab_size": 1024,
+    },
+    "model_type": "valle_simple_ar",
+    "train": {
+        "adam": {
+            "betas": [
+                0.9,
+                0.98,
+            ],
+            "eps": 1e-09,
+            "lr": 0.0004,
+            "weight_decay": 0.01,
+        },
+        "adamw": {
+            "lr": 0.00035,
+        },
+        "batch_size": 1,
+        "dataloader": {
+            "num_worker": 4,
+            "persistent_workers": true,
+            "pin_memory": true,
+        },
+        "dataset": {
+            "name": "libritts",
+            "use_dynamic_batchsize": false,
+            "use_mock_dataset": false,
+        },
+        "exponentiallr": {
+            "gamma": 0.999999,
+        },
+        "find_unused_parameters": false,
+        "gradient_accumulation_step": 1,
+        "keep_last": [
+            1,
+        ],
+        "max_epoch": 1000,
+        "max_sentences": 64,
+        "max_tokens": 11000,
+        "optimizer": "adamW",
+        "random_seed": 0,
+        "run_eval": [
+            true,
+        ],
+        "save_checkpoint_stride": [
+            2000,
+        ],
+        "scheduler": {
+            "min_lr": 1e-05,
+            "total_steps": 800000,
+            "warmup_steps": 25000,
+        },
+        "tracker": [
+            "tensorboard",
+        ],
+    },
+    "trans_exp": {
+        "cache_dir": "/nfsmnt/qiujunwen/AmphionVALLEv2/data/exp_cache/tts/",
+        "content_model_path": "/nfsmnt/qiujunwen/AmphionVALLEv2/data/pretrained_ckpts/mhubert",
+        "dataset_list": [
+            "dev_clean",
+        ],
+        "noise_dir": "/nfsmnt/qiujunwen/AmphionVALLEv2/data/noise/audiocaps",
+        "use_noise": false,
+        "use_speaker": false,
+    },
+}
