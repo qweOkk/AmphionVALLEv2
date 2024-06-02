@@ -101,3 +101,7 @@ ckpt/valle_gpt_simple/ar_libritts_dev_clean/log/ar_libritts_dev_clean/events.out
 ckpt/valle_gpt_simple/ar_libritts_dev_clean/log/ar_libritts_dev_clean/events.out.tfevents.1717142740.node03.79038.0
 ckpt/valle_gpt_simple/ar_libritts_dev_clean/log/ar_libritts_dev_clean/events.out.tfevents.1717142875.node03.79373.0
 ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0312_step-0968000_loss-0.000339/optimizer.bin
+ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0313_step-0972000_loss-0.000019/optimizer.bin
+ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0313_step-0972000_loss-0.000019/pytorch_model.bin
+ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0314_step-0974000_loss-0.000047/optimizer.bin
+ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0314_step-0974000_loss-0.000047/pytorch_model.bin
