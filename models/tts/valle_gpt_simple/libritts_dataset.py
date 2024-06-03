@@ -15,7 +15,7 @@ import pandas as pd
 import time
 import io
 from multiprocessing import Pool, Lock
-NUM_WORKERS=32
+NUM_WORKERS=4
 lock = Lock()
 SAMPLE_RATE=16000
 def get_duration(file_path):
@@ -53,11 +53,18 @@ class VALLEDataset(Dataset):
 
         ######## add data dir to dataset2dir ##########
         self.dataset2dir = {
-            'dev_clean' : '/mnt/workspace/lizhekai/data/LibriTTS',
+            'dev_clean' : '/nfsmnt/qiujunwen/data/LibriTTS',
+             'dev-other' : '/mnt/workspace/lizhekai/data/LibriTTS/dev-other',
+            'test-clean' : '/mnt/workspace/lizhekai/data/LibriTTS/test-clean',
+            'test-other' : '/mnt/workspace/lizhekai/data/LibriTTS/test-other',
+            'train-clean-100' : '/mnt/workspace/lizhekai/data/LibriTTS/train-clean-100',
+            'train-clean-360' : '/mnt/workspace/lizhekai/data/LibriTTS/train-clean-360',
+            'train-other-500' : '/mnt/workspace/lizhekai/data/LibriTTS/train-other-500',
         }
         
         ###### load metadata and transcripts #####
         for dataset_name in self.dataset_list:
+            print("Initializing dataset: ", dataset_name)
             # get [book,transcripts,audio] files list
             self.book_files_list = self.get_metadata_files(self.dataset2dir[dataset_name])
             self.trans_files_list = self.get_trans_files(self.dataset2dir[dataset_name])
@@ -84,7 +91,7 @@ class VALLEDataset(Dataset):
         # filter_by_duration: filter_out files with duration < 3.0 or > 15.0
         print(f"Filtering files with duration between 3.0 and 15.0 seconds")
         print(f"Before filtering: {len(self.trans_cache)}")
-        self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (self.trans_cache['Duration'] <= 15.0)]
+        self.trans_cache = self.trans_cache[(self.trans_cache['Duration'] >= 3.0) & (self.trans_cache['Duration'] <= 10.0)]
         print(f"After filtering: {len(self.trans_cache)}")
 
 
@@ -145,7 +152,7 @@ class VALLEDataset(Dataset):
     
     def get_num_frames(self, index):
         # get_num_frames(durations) by index
-        duration = self.meta_data_cache['Duration'][index]
+        duration = self.meta_data_cache['duration'][index]
         # num_frames = duration * SAMPLE_RATE
         num_frames = int(duration * 75)
 
@@ -261,7 +268,7 @@ def batch_by_size(
 
 def test():
     from utils.util import load_config
-    cfg = load_config('/mnt/workspace/lizhekai/AmphionVALLEv2/egs/tts/valle_gpt_simple/exp_ar_libritts.json')
+    cfg = load_config('/nfsmnt/qiujunwen/AmphionVALLEv2/egs/tts/valle_gpt_simple/exp_ar_libritts.json')
     dataset = VALLEDataset(cfg.trans_exp)
     metadata_cache = dataset.metadata_cache
     trans_cache = dataset.trans_cache

@@ -4,7 +4,8 @@ from phonemizer.utils import list2str, str2list
 from typing import List, Union
 import os
 import json
-
+_ESPEAK_LIBRARY = '/nfsmnt/qiujunwen/espeak/lib/libespeak-ng.so.1.1.51'
+EspeakBackend.set_library(_ESPEAK_LIBRARY)
 # separator=Separator(phone=' ', word=' _ ', syllable='|'),
 # # 设置用于分隔单词、音节和音素的符号
 separator = Separator(word=" _ ", syllable="|", phone=" ")

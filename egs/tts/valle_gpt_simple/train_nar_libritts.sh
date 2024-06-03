@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=train-valle-ar            # Job name
+#SBATCH --job-name=train-valle-nar            # Job name
 #SBATCH --output result.out         ## filename of the output
 #SBATCH --nodes=1                   ## Run all processes on a single node	
 #SBATCH -w, --nodelist=node03             ## Request the pointed node  
@@ -32,29 +32,32 @@ work_dir="/nfsmnt/qiujunwen/AmphionVALLEv2/"
 echo work_dir
 echo PATH
 
+
 export WORK_DIR=$work_dir
 export PYTHONPATH=$work_dir
 export PYTHONIOENCODING=UTF-8
-export PATH=$PATH:/nfsmnt/qiujunwen/espeak/bin
+ 
 cd $work_dir/modules/monotonic_align
 mkdir -p monotonic_align
 python setup.py build_ext --inplace
 cd $work_dir
-######## Set Config File Dir ##############
+
 if [ -z "$exp_config" ]; then
-    exp_config="${exp_dir}"/exp_ar_libritts.json
+    exp_config="${exp_dir}"/exp_nar_libritts.json
 fi
 echo "Exprimental Configuration File: $exp_config"
 
-######## Set the experiment name ##########
-exp_name="ar_libritts_dev_clean"
+exp_name="nar_libritts"
 
-port=53333
+port=17004
+
 
 ######## Train Model ###########
 echo "Experimental Name: $exp_name"
-CUDA_VISIBLE_DEVICES=0 accelerate launch --main_process_port $port "${work_dir}"/bins/tts/train.py --config $exp_config --exp_name $exp_name --log_level debug \
-    --resume \
-    --resume_type "resume" \
-    --resume_from_ckpt_path "/nfsmnt/qiujunwen/ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0373_step-1158000_loss-0.000001"
+CUDA_VISIBLE_DEVICES=0 accelerate launch --main_process_port $port "${work_dir}"/bins/tts/train.py --config $exp_config --exp_name $exp_name --log_level debug --seed 1234 \
+    #--resume \
+    #--resume_type "resume" \
+    #--resume_from_ckpt_path "/nfsmnt/qiujunwen/ckpt/valle_gpt_simple/ar_libritts_dev_clean/checkpoint/epoch-0373_step-1158000_loss-0.000001"
+
+
 # uncomment the "resume" part to automatically resume from the last-time checkpoint
