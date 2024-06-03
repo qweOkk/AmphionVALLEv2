@@ -54,6 +54,10 @@ class VALLEDataset(Dataset):
         ######## add data dir to dataset2dir ##########
         self.dataset2dir = {
             'dev-clean' : '/mnt/workspace/lizhekai/data/LibriTTS/dev-clean',
+            'dev-other' : '/mnt/workspace/lizhekai/data/LibriTTS/dev-other',
+            'test-clean' : '/mnt/workspace/lizhekai/data/LibriTTS/test-clean',
+            'test-other' : '/mnt/workspace/lizhekai/data/LibriTTS/test-other',
+            'train-clean-100' : '/mnt/workspace/lizhekai/data/LibriTTS/train-clean-100',
             'train-clean-360' : '/mnt/workspace/lizhekai/data/LibriTTS/train-clean-360',
             'train-other-500' : '/mnt/workspace/lizhekai/data/LibriTTS/train-other-500',
         }
